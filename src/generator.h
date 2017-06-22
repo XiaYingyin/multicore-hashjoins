@@ -101,6 +101,15 @@ numa_localize(tuple_t * relation, int32_t num_tuples, uint32_t nthreads);
 void 
 delete_relation(relation_t * reln);
 
+int
+create_vectors_pk(vector_t * DimVec,vector_para *VecParams);
+
+int
+create_fact_fk(column_t * FactColumns,vector_para *VecParams,int factrows);
+
+int create_dim_pk(column_t * DimVec, vector_para *VecParams);
+
+
 /** @} */
 
 #endif /* GENERATOR_H */

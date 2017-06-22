@@ -273,8 +273,9 @@ typedef struct param_t param_t;
 #define num_date 2555
 #define num_lineorder 600000000
 
-column_t FactColumns[4];
-vector_t DimVector[4];
+column_t FactColumns[DIM_NUM];
+column_t DimColumns[DIM_NUM];
+vector_t DimVector[DIM_NUM];
 vector_t MeasureIndex;
 int firstfilterflag=0;
 
@@ -331,8 +332,9 @@ static struct algo_t algos [] =
       {"AIR", AIR}, /* AIR algorithm by ZYS. in no_partitioning_join.c*/
       {"AIRU", AIRU}, /* FK update for AIR algorithm by ZYS. in no_partitioning_join.c*/
       {"STARJOIN", STARJOIN}, /* FK update for AIR algorithm by ZYS. in no_partitioning_join.c*/
-      {"NPO_st", NPO_st}, /* NPO single threaded */
-      {{0}, 0}
+	  {"NPOSC", NPO_SJ_COLUMN},
+	  {"NPO_st", NPO_st}, /* NPO single threaded */
+	  {{0}, 0}
   };
 
 /* command line handling functions */
@@ -350,7 +352,7 @@ main(int argc, char ** argv)
 {
     relation_t relR;
     relation_t relS;
-    int8_t   * bitm;
+    int8_t   * bitm = NULL;
     int64_t    results=0;
 
     /* start initially on CPU-0 */
@@ -366,7 +368,7 @@ main(int argc, char ** argv)
 
     /* Default values if not specified on command line */
     cmd_params.algo     = &algos[0]; /* PRO */
-    cmd_params.bitmap   = &bitm; /* bitmap NPO algorithm by zys */
+    cmd_params.bitmap   = bitm; /* bitmap NPO algorithm by zys */
     cmd_params.nthreads = 2;
     /* default dataset is Workload B (described in paper) */
     cmd_params.r_size   = 128000000;
@@ -411,7 +413,8 @@ main(int argc, char ** argv)
         create_relation_nonunique(&relR, cmd_params.r_size, cmd_params.r_size);
     }
     else if(cmd_params.starjoinflag) {
-                     create_vectors_pk(&DimVector[0],&VecParas[0]);
+                     create_vectors_pk(DimVector,VecParas);
+                     create_dim_pk(DimColumns,VecParas);
  //test whether dimension vector are sucessfully created by zys
 /*                     vectorkey_t * tmpvec;tmpvec=DimVector[2].column;
                      for(int i=0;i<VecParas[2].num_tuples;i++) printf("%d ",tmpvec[i]);
@@ -456,7 +459,8 @@ main(int argc, char ** argv)
             /* S is uniform foreign key */
             else  if(cmd_params.starjoinflag) {
                      create_fact_fk(&FactColumns[0],&VecParas[0],num_lineorder);
-    MeasureIndex.column=(vectorkey_t*)malloc(num_lineorder * sizeof(vectorkey_t));
+
+      MeasureIndex.column=(vectorkey_t*)malloc(num_lineorder * sizeof(vectorkey_t));
      if (!MeasureIndex.column) { 
         perror("out of memory when creating fact Measure Index vector.");
         return -1; 
@@ -495,16 +499,21 @@ main(int argc, char ** argv)
     //--call bitmap NPO when updratio given a update ratio value by zys
           results = NPO_bm(&relR, &relS, cmd_params.nthreads,bitm);
                }
-          else  if(cmd_params.starjoinflag) {
-			         for(int j=0;j<4;j++){
-						 firstfilterflag=j;
-						 if(VecParas[j].selectivity!=0)
-						 results =STARJOIN(&FactColumns[j], &DimVector[j], &MeasureIndex,cmd_params.nthreads, &VecParas[j],&firstfilterflag);
-						 }/**/
-                  }
-                else {
-                results = cmd_params.algo->joinAlgo(&relR, &relS, cmd_params.nthreads);
-                }
+	else if (cmd_params.starjoinflag) {
+		if (strcmp(cmd_params.algo->name, "NPOSC") == 0) {
+			cmd_params.algo->joinAlgo((relation_t*)FactColumns, (relation_t*)DimColumns, cmd_params.nthreads);
+		} else {
+			for (int j = 0; j < 4; j++) {
+				firstfilterflag = j;
+				if (VecParas[j].selectivity != 0)
+					results = STARJOIN(&FactColumns[j], &DimVector[j],
+							&MeasureIndex, cmd_params.nthreads, &VecParas[j],
+							&firstfilterflag);
+			}/**/
+		}
+	} else {
+		results = cmd_params.algo->joinAlgo(&relR, &relS, cmd_params.nthreads);
+	}
 
     printf("[INFO ] Results = %llu. DONE.\n", results);
 

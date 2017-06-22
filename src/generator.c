@@ -244,6 +244,15 @@ random_gen(relation_t *rel, const int32_t maxid)
     }
 }
 
+void
+random_gen_fact_key(fact_relation_t *rel, int idx, const int32_t maxid)
+{
+    uint32_t i;
+    for (i = 0; i < rel->num_tuples; i++) {
+        rel->tuples[i].key[i] = RAND_RANGE(maxid);
+    }
+}
+
 int 
 create_relation_pk(relation_t *relation, int32_t num_tuples) 
 {
@@ -273,7 +282,7 @@ create_vectors_pk(vector_t * DimVec,vector_para *VecParams)
     check_seed();
     printf("\ncreating dimension vectors...\n");
     int i,j,counter=0,veccounter=0;
-    vectorkey_t * tmpvec;
+    vectorkey_t * tmpvec = NULL;
     for(i=0;i<4;i++){
           if(VecParams[i].selectivity!=0){
             DimVec[i].column=(vectorkey_t*)MALLOC(VecParams[i].num_tuples * sizeof(vectorkey_t));
@@ -338,7 +347,7 @@ create_fact_fk(column_t * FactColumns,vector_para *VecParams,int factrows)
     for(i=0;i<4;i++){
 //i=2;printf("\nselectivity:%f\n",VecParams[i].selectivity);
           if(VecParams[i].selectivity!=0){
-          FactColumns[i].column=(column_t*)MALLOC(factrows * sizeof(value_t));
+          FactColumns[i].column=(intkey_t*)MALLOC(factrows * sizeof(intkey_t));
           if (!FactColumns[i].column) { 
              perror("out of memory when creating fact fk column.");
           return -1; 
@@ -373,6 +382,34 @@ create_fact_fk(column_t * FactColumns,vector_para *VecParams,int factrows)
    // free(tmpvec);
 
     return 0;
+}
+
+
+int create_dim_pk(column_t * DimVec, vector_para *VecParams) {
+	check_seed();
+	printf("\ncreating dimension vectors...\n");
+	int i, j, counter = 0, veccounter = 0;
+	for (i = 0; i < 4; i++) {
+		DimVec[i].column = (intkey_t*) MALLOC(
+				VecParams[i].num_tuples * sizeof(intkey_t));
+		DimVec[i].num_tuples = VecParams[i].num_tuples;
+		DimVec[i].bitmap = (int8_t*) MALLOC(
+				VecParams[i].num_tuples * sizeof(int8_t));
+		veccounter++;
+		for (j = 0; j < VecParams[i].num_tuples; j++) {
+		}   //--filling dimension vectors with [0,1] for bitmap by zys
+
+		printf(
+				"\nvector tuples:%d,selectivity:%f,bitmap flag:%d,non-0 positions:%d,size:%d MB.\n",
+				VecParams[i].num_tuples, VecParams[i].selectivity,
+				VecParams[i].bitmapflag, counter,
+				VecParams[i].num_tuples * sizeof(vectorkey_t) / 102 / 1024);
+		counter = 0;
+	}
+	printf("\ncreate vectors for PK table, %d vectors are created.",
+			veccounter);
+
+	return 0;
 }
 
 int 
