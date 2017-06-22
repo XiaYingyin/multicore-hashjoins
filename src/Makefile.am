@@ -51,7 +51,7 @@ AM_CFLAGS = -Wall -ansi -std=c99 -Wno-format -pedantic \
 	    -g -msse4.2 $(DEFINES)
 
 AM_LDFLAGS =
-CFLAGS = -O3
+CFLAGS = -O0
 
 bin_PROGRAMS = mchashjoins
 mchashjoins_SOURCES =  	npj_params.h prj_params.h types.h npj_types.h 	\

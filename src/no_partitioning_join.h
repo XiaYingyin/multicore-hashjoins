@@ -31,16 +31,26 @@
  */
 int64_t 
 NPO(relation_t *relR, relation_t *relS, int nthreads);
+
 int64_t 
 NPO_bm(relation_t *relR, relation_t *relS, int nthreads,int8_t *bm);
 
-int64_t 
+int64_t
 AIR(relation_t *relR, relation_t *relS, int nthreads);
 
 int64_t 
 AIRU(relation_t *relR, relation_t *relS, int nthreads, double updateratio);
+
 int64_t 
 STARJOIN(column_t *factT, vector_t *DimVec, vector_t *MIndex,int nthreads, vector_para *parame,int *filterflag);
+
+
+int64_t
+NPO_DSM(relation_t *relR, relation_t *relS, int nthreads);
+
+
+int64_t
+NPO_NSM(relation_t *relR, relation_t *relS, int nthreads);
 
 /** 
  * The No Partitioning Join Optimized (NPO) as a single-threaded

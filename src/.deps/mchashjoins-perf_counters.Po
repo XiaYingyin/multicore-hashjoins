@@ -1,3 +1,0 @@
-mchashjoins-perf_counters.o: perf_counters.c perf_counters.h
-
-perf_counters.h:

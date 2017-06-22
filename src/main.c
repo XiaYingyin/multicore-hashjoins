@@ -134,7 +134,7 @@ cpu-mapping.txt
 8 0 1 2 3 8 9 10 11
 @endverbatim
  * 
- * This file is must be created in the executable directory and used by default 
+ * This file is must be created in num_tuplesthe executable directory and used by default
  * if exists in the directory. It basically says that we will use 8 CPUs listed 
  * and threads spawned 1 to 8 will map to the given list in order. For instance 
  * thread 5 will run CPU 8. This file must be changed according to the system at
@@ -189,7 +189,7 @@ cpu-mapping.txt
  * @verbatim
       $ ./mchashjoins [other options] --r-size=128000000 --s-size=128000000 
 @endverbatim 
- *
+ *num_tuples
  * \note Configure must have run without --enable-key8B.
  * 
  * @subsection workloadA Workload A
@@ -271,25 +271,26 @@ typedef struct param_t param_t;
 #define num_supplier 200000
 #define num_customer 3000000
 #define num_date 2555
-#define num_lineorder 600000000
 
-column_t FactColumns[4];
-vector_t DimVector[4];
+column_t FactColumns[DIM_NUM];
+vector_t DimVector[DIM_NUM];
 vector_t MeasureIndex;
 int firstfilterflag=0;
+int num_lineorder = 600000000;
 
 static struct vector_para VecParas [] = 
   {
-      {0.04, 40,num_part,0},
-      {0.2, 0,num_supplier,1},   //--0 represents bitmap filtering, non-0 represents vector filter by zys
-      {0.5, 7,num_date,0},
-      {0.3,0,num_customer,1},
+      {1.0, num_part,num_part},
+      {1.0, num_supplier,num_supplier,1},   //--0 represents bitmap filtering, non-0 represents vector filter by zys
+      {1.0, num_date,num_date,1},
+      {1.0,num_customer,num_customer,1},
       {0, 0,0,0}
   };
 
 struct algo_t {
     char name[128];
     int64_t (*joinAlgo)(relation_t * , relation_t *, int);
+    void (*init)(void *, void **, void **);
 };
 
 struct param_t {
@@ -310,6 +311,7 @@ struct param_t {
     int basic_numa;/* alloc input chunks thread local? */
     char * perfconf;
     char * perfout;
+    double percent;
 };
 
 extern char * optarg;
@@ -319,20 +321,28 @@ extern int    optind, opterr, optopt;
 extern int numalocalize;  /* defined in generator.c */
 extern int nthreads;      /* defined in generator.c */
 
+void init_npo_dsm(void *param, void **fact, void **dims);
+void init_npo_nsm(void *param, void **fact, void **dims);
+void init_prho_dsm(void *param, void **fact, void **dims);
+
 /** all available algorithms */
 static struct algo_t algos [] = 
   {
-      {"PRO", PRO},
-      {"RJ", RJ},
-      {"PRH", PRH},
-      {"PRHO", PRHO},
-      {"NPO", NPO},
-      {"NPO_bm", NPO_bm},
-      {"AIR", AIR}, /* AIR algorithm by ZYS. in no_partitioning_join.c*/
-      {"AIRU", AIRU}, /* FK update for AIR algorithm by ZYS. in no_partitioning_join.c*/
-      {"STARJOIN", STARJOIN}, /* FK update for AIR algorithm by ZYS. in no_partitioning_join.c*/
-      {"NPO_st", NPO_st}, /* NPO single threaded */
-      {{0}, 0}
+      {"PRO", PRO, NULL},
+      {"RJ", RJ, NULL},
+      {"PRH", PRH, NULL},
+      {"PRHO", PRHO, NULL},
+      {"NPO", NPO, NULL},
+      {"NPO_bm", NPO_bm, NULL},
+      {"AIR", AIR, NULL}, /* AIR algorithm by ZYS. in no_partitioning_join.c*/
+      {"AIRU", AIRU, NULL}, /* FK update for AIR algorithm by ZYS. in no_partitioning_join.c*/
+      {"STARJOIN", STARJOIN, NULL}, /* FK update for AIR algorithm by ZYS. in no_partitioning_join.c*/
+	  {"NPO_DSM", NPO_DSM, init_npo_dsm},
+	  {"NPO_NSM", NPO_NSM, init_npo_nsm},
+	  {"NPO_st", NPO_st, NULL}, /* NPO single threaded */
+	  {"PRHO_DSM", PRHO_DSM, init_prho_dsm},
+	  {"PRO_DSM", PRO_DSM, init_prho_dsm},
+	  {{0}, 0, NULL}
   };
 
 /* command line handling functions */
@@ -350,7 +360,7 @@ main(int argc, char ** argv)
 {
     relation_t relR;
     relation_t relS;
-    int8_t   * bitm;
+    int8_t   * bitm = NULL;
     int64_t    results=0;
 
     /* start initially on CPU-0 */
@@ -366,8 +376,8 @@ main(int argc, char ** argv)
 
     /* Default values if not specified on command line */
     cmd_params.algo     = &algos[0]; /* PRO */
-    cmd_params.bitmap   = &bitm; /* bitmap NPO algorithm by zys */
-    cmd_params.nthreads = 2;
+    cmd_params.bitmap   = bitm; /* bitmap NPO algorithm by zys */
+    cmd_params.nthreads = 1;
     /* default dataset is Workload B (described in paper) */
     cmd_params.r_size   = 128000000;
     cmd_params.s_size   = 128000000;
@@ -383,7 +393,7 @@ main(int argc, char ** argv)
     cmd_params.fullrange_keys   = 0;
     cmd_params.basic_numa = 0;
     cmd_params.starjoinflag = 0;
-
+    cmd_params.percent = 1.0;
     parse_args(argc, argv, &cmd_params);
 
 #ifdef PERF_COUNTERS
@@ -392,18 +402,25 @@ main(int argc, char ** argv)
 #endif
     
     /* create relation R */
+    /*
     fprintf(stdout,
             "[INFO ] Creating relation R with size = %.3lf MiB, #tuples = %d : ",
             (double) sizeof(tuple_t) * cmd_params.r_size/1024.0/1024.0,
             cmd_params.r_size);
     fflush(stdout);
-
+	*/
     seed_generator(cmd_params.r_seed);
 
     /* to pass information to the create_relation methods */
     numalocalize = cmd_params.basic_numa;
     nthreads     = cmd_params.nthreads;
 
+    int has_init = cmd_params.algo->init != NULL;
+	num_lineorder = cmd_params.percent * num_lineorder;
+    for (int i= 0; i < DIM_NUM + 1; i++) {
+    	VecParas[i].num_tuples = cmd_params.percent * VecParas[i].num_tuples;
+    	VecParas[i].num_groups = cmd_params.percent * VecParas[i].num_groups;
+    }
     if(cmd_params.fullrange_keys) {
         create_relation_nonunique(&relR, cmd_params.r_size, INT_MAX);
     }
@@ -411,26 +428,26 @@ main(int argc, char ** argv)
         create_relation_nonunique(&relR, cmd_params.r_size, cmd_params.r_size);
     }
     else if(cmd_params.starjoinflag) {
-                     create_vectors_pk(&DimVector[0],&VecParas[0]);
+                     create_vectors_pk(DimVector,VecParas);
  //test whether dimension vector are sucessfully created by zys
 /*                     vectorkey_t * tmpvec;tmpvec=DimVector[2].column;
                      for(int i=0;i<VecParas[2].num_tuples;i++) printf("%d ",tmpvec[i]);
                      printf("\nPK vector %d tuples!\n",VecParas[2].num_tuples);
 */
                   }
-         else {
+         else if (!has_init){
         create_relation_pk(&relR, cmd_params.r_size);
     }
-    printf("PK is OK \n");
 
 
     /* create relation S */
+    /*
     fprintf(stdout,
             "[INFO ] Creating relation S with size = %.3lf MiB, #tuples = %d : ",
             (double) sizeof(tuple_t) * cmd_params.s_size/1024.0/1024.0,
             cmd_params.s_size);
     fflush(stdout);
-
+	*/
     seed_generator(cmd_params.s_seed);
 
     bitm=(int8_t*)malloc(cmd_params.s_size * sizeof(int8_t));
@@ -456,7 +473,8 @@ main(int argc, char ** argv)
             /* S is uniform foreign key */
             else  if(cmd_params.starjoinflag) {
                      create_fact_fk(&FactColumns[0],&VecParas[0],num_lineorder);
-    MeasureIndex.column=(vectorkey_t*)malloc(num_lineorder * sizeof(vectorkey_t));
+
+      MeasureIndex.column=(vectorkey_t*)malloc(num_lineorder * sizeof(vectorkey_t));
      if (!MeasureIndex.column) { 
         perror("out of memory when creating fact Measure Index vector.");
         return -1; 
@@ -477,12 +495,10 @@ main(int argc, char ** argv)
                      //for(int i=0;i<num_lineorder;i++) printf("%d ",tmpvec->column[i]);
 
                   }
-                  else {
+                  else if (!has_init){
                        create_relation_fk(&relS, cmd_params.s_size, cmd_params.r_size);
                    }
    
-    printf("FK is OK \n");
-
  //for(int i=0;i<cmd_params.s_size;i++) printf("%d ",bitm[i]);
 
     /* Run the selected join algorithm */
@@ -495,21 +511,29 @@ main(int argc, char ** argv)
     //--call bitmap NPO when updratio given a update ratio value by zys
           results = NPO_bm(&relR, &relS, cmd_params.nthreads,bitm);
                }
-          else  if(cmd_params.starjoinflag) {
-			         for(int j=0;j<4;j++){
-						 firstfilterflag=j;
-						 if(VecParas[j].selectivity!=0)
-						 results =STARJOIN(&FactColumns[j], &DimVector[j], &MeasureIndex,cmd_params.nthreads, &VecParas[j],&firstfilterflag);
-						 }/**/
-                  }
-                else {
-                results = cmd_params.algo->joinAlgo(&relR, &relS, cmd_params.nthreads);
-                }
+	else if (cmd_params.starjoinflag) {
+			for (int j = 0; j < 4; j++) {
+				firstfilterflag = j;
+				if (VecParas[j].selectivity != 0)
+					results = STARJOIN(&FactColumns[j], &DimVector[j],
+							&MeasureIndex, cmd_params.nthreads, &VecParas[j],
+							&firstfilterflag);
+			}/**/
+	} else {
+		if (cmd_params.algo->init) {
+			void *fact;
+			void *dims;
+			cmd_params.algo->init(NULL, &fact, &dims);
+			results = cmd_params.algo->joinAlgo((relation_t*)fact, (relation_t*)dims, cmd_params.nthreads);
+		} else {
+			results = cmd_params.algo->joinAlgo(&relR, &relS, cmd_params.nthreads);
+		}
+	}
 
     printf("[INFO ] Results = %llu. DONE.\n", results);
 
     /* clean-up */
-    if(!cmd_params.starjoinflag) {
+    if(!cmd_params.starjoinflag && !cmd_params.algo->init) {
        delete_relation(&relR);
        delete_relation(&relS);
     }
@@ -607,12 +631,13 @@ parse_args(int argc, char ** argv, param_t * cmd_params)
                 {"skew",    required_argument, 0, 'z'},
                 {"updratio", required_argument, 0, 'w'}, //--by zys
                 {"selectivity", required_argument, 0, 'u'}, //--by zys
+                {"percent", required_argument, 0, 'e'}, //--by zys
                {0, 0, 0, 0}
             };
         /* getopt_long stores the option index here. */
         int option_index = 0;
      
-        c = getopt_long (argc, argv, "a:n:p:r:s:o:x:y:z:hv",
+        c = getopt_long (argc, argv, "a:n:p:r:s:o:x:y:z:e:hv",
                          long_options, &option_index);
      
         /* Detect the end of the options. */
@@ -698,7 +723,9 @@ parse_args(int argc, char ** argv, param_t * cmd_params)
           case 'u':
               cmd_params->selectivity = atof(optarg);
               break;
-
+          case 'e':
+              cmd_params->percent = atof(optarg);
+              break;
           default:
               break;
         }
@@ -721,3 +748,33 @@ parse_args(int argc, char ** argv, param_t * cmd_params)
         printf ("\n");
     }
 }
+
+
+void init_npo_dsm(void *param, void **fact, void **dims){
+	relation_dsm_t *rel_nsm_fact = malloc(sizeof(relation_dsm_t));
+	relation_dsm_t *rel_nsm_dims = malloc(sizeof(relation_dsm_t));
+	create_rel_fact_dsm(rel_nsm_fact, num_lineorder, VecParas,DIM_NUM);
+	create_rel_dim_dsm(rel_nsm_dims, VecParas,DIM_NUM);
+	*fact = rel_nsm_fact;
+	*dims = rel_nsm_dims;
+}
+
+void init_npo_nsm(void *param, void **fact, void **dims){
+	relation_nsm_t *rel_nsm_fact = malloc(sizeof(relation_nsm_t));
+	relation_nsm_t *rel_nsm_dims = malloc(sizeof(relation_nsm_t));
+	create_rel_fact_nsm(rel_nsm_fact, num_lineorder, VecParas,DIM_NUM);
+	create_rel_dim_nsm(rel_nsm_dims, VecParas,DIM_NUM);
+	*fact = rel_nsm_fact;
+	*dims = rel_nsm_dims;
+}
+
+void init_prho_dsm(void *param, void **fact, void **dims)
+{
+	relation_t *rel_fact = malloc(sizeof(relation_t) * DIM_NUM);
+	relation_t *rel_dim = malloc(sizeof(relation_t) * DIM_NUM);
+	create_rel_sj_fact(rel_fact, num_lineorder, VecParas,DIM_NUM);
+	create_rel_sj_dims(rel_dim, VecParas,DIM_NUM);
+	*fact = rel_fact;
+	*dims = rel_dim;
+}
+

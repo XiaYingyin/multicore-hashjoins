@@ -153,7 +153,7 @@ random_uniquefk_gen(column_t *col)
     uint32_t i;
 
     for (i = 0; i < col->num_tuples; i++) {
-        col->column[i]= (i+1);
+        col->column[i]= (i);
         //printf("%d \t %d \t ", rel->tuples[i].key, rel->tuples[i].payload);
     }
 
@@ -244,6 +244,16 @@ random_gen(relation_t *rel, const int32_t maxid)
     }
 }
 
+void
+random_generate_key(column_t *col, const int32_t maxid)
+{
+    uint32_t i;
+    for (i = 0; i < col->num_tuples; i++) {
+        col->column[i] = RAND_RANGE(maxid);
+    }
+}
+
+
 int 
 create_relation_pk(relation_t *relation, int32_t num_tuples) 
 {
@@ -267,112 +277,265 @@ create_relation_pk(relation_t *relation, int32_t num_tuples)
 }
 
 //--create dimension vector by zys
-int
-create_vectors_pk(vector_t * DimVec,vector_para *VecParams)
-{
-    check_seed();
-    printf("\ncreating dimension vectors...\n");
-    int i,j,counter=0,veccounter=0;
-    vectorkey_t * tmpvec;
-    for(i=0;i<4;i++){
-          if(VecParams[i].selectivity!=0){
-            DimVec[i].column=(vectorkey_t*)MALLOC(VecParams[i].num_tuples * sizeof(vectorkey_t));
-            veccounter++;
-            tmpvec=DimVec[i].column;
-            if(VecParams[i].bitmapflag==1)
-             for(j=0;j<VecParams[i].num_tuples;j++){
-              if((double)rand()<VecParams[i].selectivity*(double)RAND_MAX){
-                 counter++;
-                 tmpvec[j]=1;
-                 }
-              else tmpvec[j]=0;
-             }//--filling dimension vectors with [0,1] for bitmap by zys
-            else if(VecParams[i].selectivity==1)
-                    for(j=0;j<VecParams[i].num_tuples;j++){
-                        tmpvec[j]=(int32_t)RAND_RANGE(VecParams[i].num_groups)+1;counter++;
-                        //printf("%d ",tmpvec[j]);
-                        }
-                 else for(j=0;j<VecParams[i].num_tuples;j++)
-                          if((double)rand()<VecParams[i].selectivity*(double)RAND_MAX){
-                               counter++;
-                               tmpvec[j]=(int32_t)RAND_RANGE(VecParams[i].num_groups)+1; 
-                               //printf("%d ",tmpvec[j]);
-                  //--make group number starts with 1 instead of 0 by zys
-                               }
-                          else tmpvec[j]=0;
-          //printf("%d ",DimVec[i].column[0]);
-//for(j=0;j<VecParams[i].num_tuples;j++) printf("%d ",DimVec[i].column[j]);
-          printf("\nvector tuples:%d,selectivity:%f,bitmap flag:%d,non-0 positions:%d,size:%d MB.\n",VecParams[i].num_tuples,VecParams[i].selectivity,VecParams[i].bitmapflag,counter,VecParams[i].num_tuples * sizeof(vectorkey_t)/102/1024);
-          counter=0;
-      }
-      DimVec[i].column=tmpvec;
-    }
-    printf("\ncreate vectors for PK table, %d vectors are created.",veccounter);
-    //free(tmpvec);
-    //relation->num_tuples = num_tuples;
-    //relation->tuples = (tuple_t*)MALLOC(relation->num_tuples * sizeof(tuple_t));
-    /*
-    if (!relation->tuples) { 
-        perror("out of memory");
-        return -1; 
-    }
-    */
-    //random_unique_gen(relation);
+int create_vectors_pk(vector_t * DimVec, vector_para *VecParams) {
+	check_seed();
+	printf("\ncreating dimension vectors...\n");
+	int i, j, counter = 0, veccounter = 0;
+	vectorkey_t * tmpvec = NULL;
+	for (i = 0; i < 4; i++) {
+		DimVec[i].column = (vectorkey_t*) MALLOC(
+				VecParams[i].num_tuples * sizeof(vectorkey_t));
+		veccounter++;
+		tmpvec = DimVec[i].column;
+		if (VecParams[i].bitmapflag == 1) {
+			for (j = 0; j < VecParams[i].num_tuples; j++) {
+				if ((double) rand()<VecParams[i].selectivity*(double)RAND_MAX) {
+					counter++;
+					tmpvec[j] = 1;
+				} else
+					tmpvec[j] = 0;
+			} //--filling dimension vectors with [0,1] for bitmap by zys
+		}else if (VecParams[i].selectivity == 1) {
+			for (j = 0; j < VecParams[i].num_tuples; j++) {
+				tmpvec[j] = j + 1;
+				counter++;
+				//printf("%d ",tmpvec[j]);
+			}
+		}
+		else {
+			for (j = 0; j < VecParams[i].num_tuples; j++)
+				if ((double) rand()<VecParams[i].selectivity*(double)RAND_MAX) {
+					counter++;
+					tmpvec[j] = j + 1;
+					//printf("%d ",tmpvec[j]);
+					//--make group number starts with 1 instead of 0 by zys
+				} else
+					tmpvec[j] = 0;
+		}
+		printf(
+				"\nvector tuples:%d,selectivity:%f,bitmap flag:%d,non-0 positions:%d,size:%d MB.\n",
+				VecParams[i].num_tuples, VecParams[i].selectivity,
+				VecParams[i].bitmapflag, counter,
+				VecParams[i].num_tuples * sizeof(vectorkey_t) / 102 / 1024);
+		counter = 0;
 
+		for (j = 0; j < VecParams[i].num_tuples; j++) {
+			uint32_t k = RAND_RANGE(j);
+			vectorkey_t tmp = tmpvec[j];
+			tmpvec[j] = tmpvec[k];
+			tmpvec[k] = tmp;
+		}
+		DimVec[i].column = tmpvec;
+	}
+	printf("\ncreate vectors for PK table, %d vectors are created.",
+			veccounter);
+	//free(tmpvec);
+	//relation->num_tuples = num_tuples;
+	//relation->tuples = (tuple_t*)MALLOC(relation->num_tuples * sizeof(tuple_t));
+	/*
+	 if (!relation->tuples) {
+	 perror("out of memory");
+	 return -1;
+	 }
+	 */
+	//random_unique_gen(relation);
 #ifdef PERSIST_RELATIONS
-    //write_relation(relation, "R.tbl");
+	//write_relation(relation, "R.tbl");
 #endif
 
-    return 0;
+	return 0;
 }
 
 //--create fact fk columns and measure index by zys
-int
-create_fact_fk(column_t * FactColumns,vector_para *VecParams,int factrows)
-{
-    check_seed();
-    printf("\ncreating fact fk columns...\n");
-    int i=0,j,tablecounter=0;
+int create_fact_fk(column_t * FactColumns, vector_para *VecParams, int factrows) {
+	check_seed();
+	printf("\ncreating fact fk columns...\n");
+	int i = 0, j, tablecounter = 0;
 
-    column_t tmpcol;intkey_t * tmp;
-    for(i=0;i<4;i++){
-//i=2;printf("\nselectivity:%f\n",VecParams[i].selectivity);
-          if(VecParams[i].selectivity!=0){
-          FactColumns[i].column=(column_t*)MALLOC(factrows * sizeof(value_t));
-          if (!FactColumns[i].column) { 
-             perror("out of memory when creating fact fk column.");
-          return -1; 
-          }
-          FactColumns[i].num_tuples=factrows;
-          tmp=FactColumns[i].column;
-          tablecounter++;
+	column_t tmpcol;
+	intkey_t * tmp;
+	for (i = 0; i < 4; i++) {
+		FactColumns[i].column = (intkey_t*) MALLOC(factrows * sizeof(intkey_t));
+		if (!FactColumns[i].column) {
+			perror("out of memory when creating fact fk column.");
+			return -1;
+		}
+		FactColumns[i].num_tuples = factrows;
+		tmp = FactColumns[i].column;
+		tablecounter++;
 
 //--revised from create_relation_fk function by zys
-    int32_t iters, remainder;
-   //--alternative generation method 
-    iters = FactColumns[i].num_tuples / VecParams[i].num_tuples;//printf("\nitres:%d\n",iters);
-    for(j = 0; j < iters; j++){
-        tmpcol.num_tuples = VecParams[i].num_tuples;
-        tmpcol.column = tmp + VecParams[i].num_tuples * j;
-        random_uniquefk_gen(&tmpcol);
-   }
+		int32_t iters, remainder;
+		//--alternative generation method
+		iters = FactColumns[i].num_tuples / VecParams[i].num_tuples;//printf("\nitres:%d\n",iters);
+		for (j = 0; j < iters; j++) {
+			tmpcol.num_tuples = VecParams[i].num_tuples;
+			tmpcol.column = tmp + VecParams[i].num_tuples * j;
+			random_uniquefk_gen(&tmpcol);
+		}
 
-    //-- if num_tuples is not an exact multiple of maxid 
-    remainder = FactColumns[i].num_tuples % VecParams[i].num_tuples;
-    if(remainder > 0) {
-        tmpcol.num_tuples = remainder;
-        tmpcol.column = tmp + VecParams[i].num_tuples * iters;
-        random_uniquefk_gen(&tmpcol);
+		//-- if num_tuples is not an exact multiple of maxid
+		remainder = FactColumns[i].num_tuples % VecParams[i].num_tuples;
+		if (remainder > 0) {
+			tmpcol.num_tuples = remainder;
+			tmpcol.column = tmp + VecParams[i].num_tuples * iters;
+			random_uniquefk_gen(&tmpcol);
+		}
+		/**/
+		FactColumns[i].column = tmp;
+		printf("\ncreate column[%d] for fK table, %d tuples are created.\n",
+				i + 1, factrows);
+
+	}
+
+	return 0;
+}
+
+int create_rel_fact_dsm(relation_dsm_t * rel, int64_t rows, vector_para *param,
+		int dims) {
+
+	int i = 0, j;
+	check_seed();
+	rel->columns = (column_t*)malloc(dims * sizeof(column_t));
+	rel->num_columns = dims;
+	for (i = 0; i < dims; i++) {
+		rel->columns[i].column = (intkey_t*) malloc(rows * sizeof(intkey_t));
+		rel->columns[i].payload = (intkey_t*) malloc(rows * sizeof(intkey_t));
+		if (!rel->columns[i].column) {
+			perror("out of memory when creating fact fk column.");
+			return -1;
+		}
+		rel->columns[i].num_tuples = rows;
+
+		column_t column;
+		int32_t iters, remainder;
+		//--alternative generation method
+		iters = rel->columns[i].num_tuples / param[i].num_tuples;
+		for (j = 0; j < iters; j++) {
+			column.num_tuples = param[i].num_tuples;
+			column.column = rel->columns[i].column + param[i].num_tuples * j;
+			random_uniquefk_gen(&column);
+		}
+
+		remainder = rel->columns[i].num_tuples % param[i].num_tuples;
+		if (remainder > 0) {
+			column.num_tuples = remainder;
+			column.column = rel->columns[i].column
+					+ param[i].num_tuples * iters;
+			random_uniquefk_gen(&column);
+		}
+		knuth_shufflefk(&(rel->columns[i]));
+	}
+
+	return 0;
+}
+
+int create_rel_fact_nsm(relation_nsm_t * rel, int64_t rows,
+		vector_para *param, int dims) {
+
+	int column, row;
+	check_seed();
+	rel->bitmaps = NULL;
+	rel->num_columns = dims;
+	rel->tuples = (tuple_t**) malloc(rows * sizeof(tuple_t*));
+	rel->num_tuples = malloc(dims * sizeof(uint32_t));
+	rel->mem = (tuple_t *)malloc((int64_t)dims * rows * sizeof(tuple_t));
+	for (column = 0; column < dims; column++) {
+		rel->num_tuples[column] = rows;
+	}
+	for (row = 0; row < rows; row++) {
+		rel->tuples[row] = rel->mem + (int64_t)dims * row;
+		for (column = 0; column < dims; column++) {
+			int32_t groups = param[column].num_tuples;
+			rel->tuples[row][column].key = row % groups;
+		}
+	}
+
+    for (row =rows - 1; row > 0; row--) {
+        int32_t  j              = RAND_RANGE(row);
+        tuple_t* tmp            = rel->tuples[row];
+        rel->tuples[row] = rel->tuples[j];
+        rel->tuples[j] = tmp;
     }
-/**/
-    FactColumns[i].column=tmp;
-    printf("\ncreate column[%d] for fK table, %d tuples are created.\n",i+1,factrows);
+	return 0;
+}
 
-     }//--end for if(VecParams[i].selectivity>0)    by zys 
-    }//--end for table loop by zys
-   // free(tmpvec);
+int create_rel_dim_dsm(relation_dsm_t * rel, vector_para *params, int dims) {
+	int i, j, counter = 0, veccounter = 0;
+	check_seed();
+	rel->num_columns = dims;
+	rel->columns = (column_t*)malloc(dims * sizeof(column_t));
+	for (i = 0; i < dims; i++) {
+		rel->columns[i].column = (intkey_t*) malloc(
+				params[i].num_tuples * sizeof(intkey_t));
+		rel->columns[i].payload = (value_t*) malloc(
+				params[i].num_tuples * sizeof(value_t));
+		rel->columns[i].num_tuples = params[i].num_tuples;
+		rel->columns[i].bitmap = (int8_t*) malloc(
+				params[i].num_tuples * sizeof(int8_t));
+		veccounter++;
+		for (j = 0; j < params[i].num_tuples; j++) {
+			if ((double) rand() < params[i].selectivity * (double) RAND_MAX) {
+				rel->columns[i].bitmap[j] = 1;
+			} else {
+				rel->columns[i].bitmap[j] = 0;
+			};
+		}
 
-    return 0;
+		int32_t iters, remainder;
+		column_t column;
+		//--alternative generation method
+		iters = rel->columns[i].num_tuples / params[i].num_tuples;
+		for (j = 0; j < iters; j++) {
+			column.num_tuples = params[i].num_tuples;
+			column.column = rel->columns[i].column + params[i].num_tuples * j;
+			random_uniquefk_gen(&column);
+		}
+
+		remainder = rel->columns[i].num_tuples % params[i].num_tuples;
+		if (remainder > 0) {
+			column.num_tuples = remainder;
+			column.column = rel->columns[i].column
+					+ params[i].num_tuples * iters;
+			random_uniquefk_gen(&column);
+		}
+		knuth_shufflefk(&(rel->columns[i]));
+	}
+
+	return 0;
+}
+
+int create_rel_dim_nsm(relation_nsm_t * rel, vector_para *param, int dims) {
+	int column, row;
+	check_seed();
+	rel->num_columns = dims;
+	rel->tuples = (tuple_t**)malloc(dims * sizeof(tuple_t*));
+	rel->bitmaps = (uint8_t**)malloc(dims * sizeof(uint8_t*));
+	rel->num_tuples = malloc(dims * sizeof(uint32_t));
+
+	for (column = 0; column < dims; column++) {
+		uint32_t rows = param[column].num_tuples;
+		rel->num_tuples[column] = rows;
+		rel->bitmaps[column] = malloc(rows * sizeof(uint8_t *));
+		rel->tuples[column] = (tuple_t*)malloc(rows * sizeof(tuple_t));
+		for (row = 0; row < rows; row++) {
+			rel->tuples[column][row].key = row % rows;
+
+			if ((double) rand() < param[column].selectivity * (double) RAND_MAX) {
+				rel->bitmaps[column][row] = 1;
+			} else {
+				rel->bitmaps[column][row] = 0;
+			};
+		}
+	    for (row =rows - 1; row > 0;row--) {
+	        int32_t  j              = RAND_RANGE(column);
+	        tuple_t tmp            = rel->tuples[column][j];
+	        rel->tuples[column][j] = rel->tuples[column][row];
+	        rel->tuples[column][row] = tmp;
+	    }
+	}
+
+	return 0;
 }
 
 int 
@@ -686,4 +849,55 @@ delete_relation(relation_t * rel)
 {
     /* clean up */
     FREE(rel->tuples, rel->num_tuples * sizeof(tuple_t));
+}
+
+
+int create_rel_sj_fact(relation_t * rel, int64_t rows,
+		vector_para *param, int dims) {
+
+	int column, row;
+	check_seed();
+	for (column = 0; column < dims; column++) {
+		relation_t *r = rel + column;
+		r->num_tuples = rows;
+		r->tuples = (tuple_t*) alloc_aligned(r->num_tuples * sizeof(tuple_t) +
+	                                       RELATION_PADDING);
+		int32_t groups = param[column].num_tuples;
+		for (row = 0; row < rows; row++) {
+			r->tuples[row].key = row % groups;
+		}
+	    for (row =rows - 1; row > 0; row--) {
+	        int32_t  j              = RAND_RANGE(row);
+	        tuple_t tmp            = r->tuples[row];
+	        r->tuples[row] = r->tuples[j];
+	        r->tuples[j] = tmp;
+	    }
+	}
+
+	return 0;
+}
+
+int create_rel_sj_dims(relation_t * rel,
+		vector_para *param, int dims) {
+
+	int column, row;
+	check_seed();
+	for (column = 0; column < dims; column++) {
+		relation_t *r = rel + column;
+		int32_t rows = param[column].num_tuples;
+		r->num_tuples = rows;
+		r->tuples = (tuple_t*) alloc_aligned(r->num_tuples * sizeof(tuple_t) +
+	                                       RELATION_PADDING);
+		for (row = 0; row < rows; row++) {
+			r->tuples[row].key = row % rows;
+		}
+	    for (row =rows - 1; row > 0; row--) {
+	        int32_t  j              = RAND_RANGE(row);
+	        tuple_t tmp            = r->tuples[row];
+	        r->tuples[row] = r->tuples[j];
+	        r->tuples[j] = tmp;
+	    }
+	}
+
+	return 0;
 }

@@ -101,6 +101,28 @@ numa_localize(tuple_t * relation, int32_t num_tuples, uint32_t nthreads);
 void 
 delete_relation(relation_t * reln);
 
+int
+create_vectors_pk(vector_t * DimVec,vector_para *VecParams);
+
+int
+create_fact_fk(column_t * FactColumns,vector_para *VecParams,int factrows);
+
+
+int create_rel_fact_dsm(relation_dsm_t * rel, int64_t rows, vector_para *param,
+		int dims) ;
+
+int create_rel_dim_dsm(relation_dsm_t * rel, vector_para *params, int dims);
+
+int create_rel_fact_nsm(relation_nsm_t * rel, int64_t rows, vector_para *param,
+		int dims);
+
+int create_rel_dim_nsm(relation_nsm_t * rel, vector_para *param, int dims);
+
+int create_rel_sj_fact(relation_t * rel, int64_t rows,
+		vector_para *param, int dims);
+
+int create_rel_sj_dims(relation_t * rel,
+		vector_para *param, int dims);
 /** @} */
 
 #endif /* GENERATOR_H */
