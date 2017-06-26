@@ -46,7 +46,12 @@ STARJOIN(column_t *factT, vector_t *DimVec, vector_t *MIndex,int nthreads, vecto
 
 
 int64_t
-NPO_SJ_COLUMN(relation_t *relR, relation_t *relS, int nthreads);
+NPO_SJ_NSM(relation_t *relR, relation_t *relS, int nthreads);
+
+
+int64_t
+NPO_SJ_DSM(relation_t *relR, relation_t *relS, int nthreads);
+
 /** 
  * The No Partitioning Join Optimized (NPO) as a single-threaded
  * implementation. Just returns the number of result tuples.

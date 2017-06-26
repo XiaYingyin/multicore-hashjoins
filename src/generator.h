@@ -107,8 +107,16 @@ create_vectors_pk(vector_t * DimVec,vector_para *VecParams);
 int
 create_fact_fk(column_t * FactColumns,vector_para *VecParams,int factrows);
 
-int create_dim_pk(column_t * DimVec, vector_para *VecParams);
 
+int create_rel_nsm_fact_fk(relation_nsm_t * rel, int64_t rows, vector_para *param,
+		int dims) ;
+
+int create_rel_nsm_dim_pk(relation_nsm_t * rel, vector_para *params, int dims);
+
+int create_rel_dsm_fact_fk(relation_dsm_t * rel, int64_t rows, vector_para *param,
+		int dims);
+
+int create_rel_dsm_dim_pk(relation_dsm_t * rel, vector_para *param, int dims);
 
 /** @} */
 

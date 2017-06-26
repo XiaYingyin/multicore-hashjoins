@@ -69,17 +69,18 @@ struct relation_t {
   uint32_t  num_tuples;
 };
 
+typedef struct relation_dsm_t {
+	tuple_t **tuples;
+	uint32_t num_columns;
+	uint32_t *num_tuples;
+	uint8_t **bitmaps;
+} relation_dsm_t;
 
-typedef struct fact_tuple_t {
-	intkey_t key[DIM_NUM];
-	value_t payload;
-} fact_tuple_t;
+typedef struct relation_nsm_t {
+	column_t *columns;
+	uint32_t num_columns;
+} relation_nsm_t;
 
-typedef struct fact_relation_t {
-	fact_tuple_t *tuples;
-	uint32_t num_tuples;
-	value_t payload;
-} fact_relation_t;
 /** @} */
 
 #endif /* TYPES_H */
