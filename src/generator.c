@@ -847,3 +847,28 @@ delete_relation(relation_t * rel)
     /* clean up */
     FREE(rel->tuples, rel->num_tuples * sizeof(tuple_t));
 }
+
+
+int create_rel_dsm_fact_fk(relation_t * rel, int64_t rows,
+		vector_para *param, int dims) {
+
+	int column, row;
+	check_seed();
+	for (column = 0; column < dims; column++) {
+		relation_t *r = &(rel[column]);
+		r->num_tuples = rows;
+		r->tuples = malloc(rows * sizeof(tuple_t));
+		int32_t groups = param[column].num_groups;
+		for (row = 0; row < rows; row++) {
+			r->tuples[row].key = row % groups;
+		}
+	    for (row =rows - 1; row > 0; row--) {
+	        int32_t  j              = RAND_RANGE(row);
+	        tuple_t* tmp            = r->tuples[row];
+	        r->tuples[row] = rel->tuples[j];
+	        r->tuples[j] = tmp;
+	    }
+	}
+
+	return 0;
+}

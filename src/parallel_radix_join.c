@@ -1523,6 +1523,14 @@ PRHO(relation_t * relR, relation_t * relS, int nthreads)
     return join_init_run(relR, relS, histogram_optimized_join, nthreads);
 }
 
+int64_t
+PRHO_SJ(relation_t * relR, relation_t * relS, int nthreads)
+{
+	for (int i = 0; i < NUM_DIMS; i++) {
+		join_init_run(relR, relS, histogram_optimized_join, nthreads);
+	}
+}
+
 /** \copydoc RJ */
 int64_t 
 RJ(relation_t * relR, relation_t * relS, int nthreads)

@@ -339,6 +339,7 @@ static struct algo_t algos [] =
 	  {"NPO_SN", NPO_SJ_NSM, init_ss_nsm},
 	  {"NPO_SD", NPO_SJ_DSM, init_ss_dsm},
 	  {"NPO_st", NPO_st, NULL}, /* NPO single threaded */
+	  {"PRHJ_S", NPO_SJ, init_prhjs}
 	  {{0}, 0, NULL}
   };
 
@@ -763,5 +764,12 @@ void init_ss_dsm(void *param, void **fact, void **dims){
 	create_rel_dsm_dim_pk(rel_nsm_dims, VecParas,DIM_NUM);
 	*fact = rel_nsm_fact;
 	*dims = rel_nsm_dims;
+}
+
+void init_prhjs(void *param, void **fact, void **dims)
+{
+	relation_t *rel_fact = malloc(sizeof(relation_t) * DIM_NUM);
+	relation_t *rel_dim = malloc(sizeof(relation_t) * DIM_NUM);
+
 }
 
