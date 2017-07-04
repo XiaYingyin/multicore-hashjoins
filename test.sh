@@ -16,6 +16,10 @@ do
 	echo ""
 	echo "---------------------------------------"
 	echo ""
+	echo "--------NPO STAR JOIN VECTOR--------------"
+	./src/mchashjoins -a PRHO_SJ --starjoinflag -n 16 -e ${percent}
+	echo ""
+	echo "---------------------------------------"
 	echo ""
 done
 
