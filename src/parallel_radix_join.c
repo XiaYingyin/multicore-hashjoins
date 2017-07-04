@@ -1513,7 +1513,7 @@ PRO(relation_t * relR, relation_t * relS, int nthreads)
 int64_t 
 PRH(relation_t * relR, relation_t * relS, int nthreads)
 {
-    return join_init_run(relR, relS, histogram_join, nthreads);
+    return join_init_run(relR, relS, histogram_join, nthreads / 4);
 }
 
 /** \copydoc PRHO */
