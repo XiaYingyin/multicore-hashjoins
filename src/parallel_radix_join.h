@@ -81,4 +81,6 @@ PRH(relation_t * relR, relation_t * relS, int nthreads);
 int64_t 
 PRHO(relation_t * relR, relation_t * relS, int nthreads);
 
+int64_t
+PRHO_SJ(relation_t * relR, relation_t * relS, int nthreads);
 #endif /* PARALLEL_RADIX_JOIN_H */

@@ -409,14 +409,14 @@ int create_rel_nsm_fact_fk(relation_nsm_t * rel, int64_t rows, vector_para *para
 		column_t column;
 		int32_t iters, remainder;
 		//--alternative generation method
-		iters = rel->columns[i].num_tuples / param[i].num_groups;
+		iters = rel->columns[i].num_tuples / param[i].num_tuples;
 		for (j = 0; j < iters; j++) {
 			column.num_tuples = param[i].num_tuples;
 			column.column = rel->columns[i].column + param[i].num_tuples * j;
 			random_uniquefk_gen(&column);
 		}
 
-		remainder = rel->columns[i].num_tuples % param[i].num_groups;
+		remainder = rel->columns[i].num_tuples % param[i].num_tuples;
 		if (remainder > 0) {
 			column.num_tuples = remainder;
 			column.column = rel->columns[i].column
@@ -445,7 +445,7 @@ int create_rel_dsm_fact_fk(relation_dsm_t * rel, int64_t rows,
 	for (row = 0; row < rows; row++) {
 		rel->tuples[row] = malloc(dims * sizeof(tuple_t));
 		for (column = 0; column < dims; column++) {
-			int32_t groups = param[column].num_groups;
+			int32_t groups = param[column].num_tuples;
 			rel->tuples[row][column].key = row % groups;
 		}
 	}
@@ -482,14 +482,14 @@ int create_rel_nsm_dim_pk(relation_nsm_t * rel, vector_para *params, int dims) {
 		int32_t iters, remainder;
 		column_t column;
 		//--alternative generation method
-		iters = rel->columns[i].num_tuples / params[i].num_groups;
+		iters = rel->columns[i].num_tuples / params[i].num_tuples;
 		for (j = 0; j < iters; j++) {
 			column.num_tuples = params[i].num_tuples;
 			column.column = rel->columns[i].column + params[i].num_tuples * j;
 			random_uniquefk_gen(&column);
 		}
 
-		remainder = rel->columns[i].num_tuples % params[i].num_groups;
+		remainder = rel->columns[i].num_tuples % params[i].num_tuples;
 		if (remainder > 0) {
 			column.num_tuples = remainder;
 			column.column = rel->columns[i].column
@@ -512,7 +512,7 @@ int create_rel_dsm_dim_pk(relation_dsm_t * rel, vector_para *param, int dims) {
 
 	for (column = 0; column < dims; column++) {
 		uint32_t rows = param[column].num_tuples;
-		int32_t groups = param[column].num_groups;
+		int32_t groups = param[column].num_tuples;
 		rel->num_tuples[column] = rows;
 		rel->bitmaps[column] = malloc(rows * sizeof(uint8_t *));
 		rel->tuples[column] = (tuple_t*)malloc(rows * sizeof(tuple_t));
@@ -849,7 +849,7 @@ delete_relation(relation_t * rel)
 }
 
 
-int create_rel_dsm_fact_fk(relation_t * rel, int64_t rows,
+int create_rel_sj_fact(relation_t * rel, int64_t rows,
 		vector_para *param, int dims) {
 
 	int column, row;
@@ -858,13 +858,37 @@ int create_rel_dsm_fact_fk(relation_t * rel, int64_t rows,
 		relation_t *r = &(rel[column]);
 		r->num_tuples = rows;
 		r->tuples = malloc(rows * sizeof(tuple_t));
-		int32_t groups = param[column].num_groups;
+		int32_t groups = param[column].num_tuples;
 		for (row = 0; row < rows; row++) {
 			r->tuples[row].key = row % groups;
 		}
 	    for (row =rows - 1; row > 0; row--) {
 	        int32_t  j              = RAND_RANGE(row);
-	        tuple_t* tmp            = r->tuples[row];
+	        tuple_t tmp            = r->tuples[row];
+	        r->tuples[row] = rel->tuples[j];
+	        r->tuples[j] = tmp;
+	    }
+	}
+
+	return 0;
+}
+
+int create_rel_sj_dims(relation_t * rel,
+		vector_para *param, int dims) {
+
+	int column, row;
+	check_seed();
+	for (column = 0; column < dims; column++) {
+		relation_t *r = &(rel[column]);
+		int32_t rows = param[column].num_tuples;
+		r->num_tuples = rows;
+		r->tuples = malloc(rows * sizeof(tuple_t));
+		for (row = 0; row < rows; row++) {
+			r->tuples[row].key = row % rows;
+		}
+	    for (row =rows - 1; row > 0; row--) {
+	        int32_t  j              = RAND_RANGE(row);
+	        tuple_t tmp            = r->tuples[row];
 	        r->tuples[row] = rel->tuples[j];
 	        r->tuples[j] = tmp;
 	    }

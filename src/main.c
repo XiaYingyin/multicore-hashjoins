@@ -323,6 +323,7 @@ extern int nthreads;      /* defined in generator.c */
 
 void init_ss_nsm(void *param, void **fact, void **dims);
 void init_ss_dsm(void *param, void **fact, void **dims);
+void init_prhj_sj(void *param, void **fact, void **dims);
 
 /** all available algorithms */
 static struct algo_t algos [] = 
@@ -339,7 +340,7 @@ static struct algo_t algos [] =
 	  {"NPO_SN", NPO_SJ_NSM, init_ss_nsm},
 	  {"NPO_SD", NPO_SJ_DSM, init_ss_dsm},
 	  {"NPO_st", NPO_st, NULL}, /* NPO single threaded */
-	  {"PRHJ_S", NPO_SJ, init_prhjs}
+	  {"PRHO_SJ", PRHO_SJ, init_prhj_sj},
 	  {{0}, 0, NULL}
   };
 
@@ -766,10 +767,13 @@ void init_ss_dsm(void *param, void **fact, void **dims){
 	*dims = rel_nsm_dims;
 }
 
-void init_prhjs(void *param, void **fact, void **dims)
+void init_prhj_sj(void *param, void **fact, void **dims)
 {
 	relation_t *rel_fact = malloc(sizeof(relation_t) * DIM_NUM);
 	relation_t *rel_dim = malloc(sizeof(relation_t) * DIM_NUM);
-
+	create_rel_sj_fact(rel_fact, num_lineorder, VecParas,DIM_NUM);
+	create_rel_sj_dims(rel_dim, VecParas,DIM_NUM);
+	*fact = rel_fact;
+	*dims = rel_dim;
 }
 

@@ -118,6 +118,11 @@ int create_rel_dsm_fact_fk(relation_dsm_t * rel, int64_t rows, vector_para *para
 
 int create_rel_dsm_dim_pk(relation_dsm_t * rel, vector_para *param, int dims);
 
+int create_rel_sj_fact(relation_t * rel, int64_t rows,
+		vector_para *param, int dims);
+
+int create_rel_sj_dims(relation_t * rel,
+		vector_para *param, int dims);
 /** @} */
 
 #endif /* GENERATOR_H */
