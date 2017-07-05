@@ -889,7 +889,7 @@ int create_rel_sj_dims(relation_t * rel,
 	    for (row =rows - 1; row > 0; row--) {
 	        int32_t  j              = RAND_RANGE(row);
 	        tuple_t tmp            = r->tuples[row];
-	        r->tuples[row] = rel->tuples[j];
+	        r->tuples[row] = r->tuples[j];
 	        r->tuples[j] = tmp;
 	    }
 	}
