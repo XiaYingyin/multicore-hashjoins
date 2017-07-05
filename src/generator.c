@@ -855,9 +855,10 @@ int create_rel_sj_fact(relation_t * rel, int64_t rows,
 	int column, row;
 	check_seed();
 	for (column = 0; column < dims; column++) {
-		relation_t *r = &(rel[column]);
+		relation_t *r = rel + column;
 		r->num_tuples = rows;
-		r->tuples = malloc(rows * sizeof(tuple_t));
+		r->tuples = (tuple_t*) alloc_aligned(r->num_tuples * sizeof(tuple_t) +
+	                                       RELATION_PADDING);
 		int32_t groups = param[column].num_tuples;
 		for (row = 0; row < rows; row++) {
 			r->tuples[row].key = row % groups;
@@ -865,7 +866,7 @@ int create_rel_sj_fact(relation_t * rel, int64_t rows,
 	    for (row =rows - 1; row > 0; row--) {
 	        int32_t  j              = RAND_RANGE(row);
 	        tuple_t tmp            = r->tuples[row];
-	        r->tuples[row] = rel->tuples[j];
+	        r->tuples[row] = r->tuples[j];
 	        r->tuples[j] = tmp;
 	    }
 	}
@@ -879,10 +880,11 @@ int create_rel_sj_dims(relation_t * rel,
 	int column, row;
 	check_seed();
 	for (column = 0; column < dims; column++) {
-		relation_t *r = &(rel[column]);
+		relation_t *r = rel + column;
 		int32_t rows = param[column].num_tuples;
 		r->num_tuples = rows;
-		r->tuples = malloc(rows * sizeof(tuple_t));
+		r->tuples = (tuple_t*) alloc_aligned(r->num_tuples * sizeof(tuple_t) +
+	                                       RELATION_PADDING);
 		for (row = 0; row < rows; row++) {
 			r->tuples[row].key = row % rows;
 		}
