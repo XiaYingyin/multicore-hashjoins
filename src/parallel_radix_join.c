@@ -1528,7 +1528,7 @@ PRHO_SJ(relation_t * relR, relation_t * relS, int nthreads)
 {
 	int ret;
 	for (int i = 0; i < DIM_NUM; i++) {
-		ret = join_init_run(relR, relS, histogram_optimized_join, nthreads);
+		ret = join_init_run(relR+i, relS+i, histogram_optimized_join, nthreads);
 	}
 	return ret;
 }
