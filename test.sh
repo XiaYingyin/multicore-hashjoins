@@ -1,8 +1,10 @@
 
 rm memory.txt
 rm time.txt
-echo "NPO_NSM	NPO_DSM	STAR_JOIN	PRHO_DSM	PRO_DSM" >> time.txt
-echo "" >> memory.txt
+
+echo "NPO_DSM	NPO_NSM	STAR_JOIN	PRHO_DSM	PRO_DSM" >> time.txt
+echo "NPO_DSM	NPO_NSM	STAR_JOIN	PRHO_DSM	PRO_DSM" >> memory.txt
+
 for ((i=1; i<=128; i=$[i*2]))
 do
 	echo "---------------------------------------"
@@ -11,7 +13,7 @@ do
 	
 	echo "fact rows ${rows}"
 	
-	echo "--------NPO STAR JOIN NSM--------------"
+	echo "--------NPO DSM--------------"
 	\time -v ./src/mchashjoins -a NPO_DSM -n 16 -e ${percent}  &> tmp.out
        	cat tmp.out
 	t1=`cat tmp.out | grep "__END__" |awk 'BEGIN {m = 0} { if (m==0) m=$7; else if ($7 > m) m=$7;} END {print m}'`
@@ -19,8 +21,8 @@ do
 	echo ""
 	echo "---------------------------------------"
 
-	echo "--------NPO STAR JOIN DSM--------------"
-	\time -v ./src/mchashjoins -a NPO_DSM -n 16 -e ${percent} &> tmp.out
+	echo "--------NPO NSM--------------"
+	\time -v ./src/mchashjoins -a NPO_NSM -n 16 -e ${percent} &> tmp.out
        	cat tmp.out
        	t2=`cat tmp.out | grep "__END__" |awk 'BEGIN {m = 0} { if (m==0) m=$7; else if ($7 > m) m=$7;} END {print m}'`
 	m2=`cat tmp.out | grep "Maximum resident set size (kbytes)" | awk -F ':' '{print $2}'`
