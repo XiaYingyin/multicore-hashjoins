@@ -400,6 +400,7 @@ int create_rel_fact_dsm(relation_dsm_t * rel, int64_t rows, vector_para *param,
 	rel->num_columns = dims;
 	for (i = 0; i < dims; i++) {
 		rel->columns[i].column = (intkey_t*) malloc(rows * sizeof(intkey_t));
+		rel->columns[i].payload = (intkey_t*) malloc(rows * sizeof(intkey_t));
 		if (!rel->columns[i].column) {
 			perror("out of memory when creating fact fk column.");
 			return -1;
@@ -467,6 +468,8 @@ int create_rel_dim_dsm(relation_dsm_t * rel, vector_para *params, int dims) {
 	for (i = 0; i < dims; i++) {
 		rel->columns[i].column = (intkey_t*) malloc(
 				params[i].num_tuples * sizeof(intkey_t));
+		rel->columns[i].payload = (value_t*) malloc(
+				params[i].num_tuples * sizeof(value_t));
 		rel->columns[i].num_tuples = params[i].num_tuples;
 		rel->columns[i].bitmap = (int8_t*) malloc(
 				params[i].num_tuples * sizeof(int8_t));
