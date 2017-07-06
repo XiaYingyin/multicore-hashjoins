@@ -53,7 +53,7 @@ POST_UNINSTALL = :
 #am__append_3 = -lperf
 #am__append_4 = -I../lib/intel-pcm-1.7/ -L../lib/intel-pcm-1.7/lib/
 #am__append_5 = -lperf
-am__append_6 = -DDEBUG
+#am__append_6 = -DDEBUG
 #am__append_7 = -DPADDED_BUCKET=1
 am__append_8 = -DPADDED_BUCKET=0
 #am__append_9 = -DNO_TIMING
@@ -111,7 +111,7 @@ AUTOMAKE = ${SHELL} /home/guohua/git/multicore-hashjoins/missing --run automake-
 AWK = mawk
 CC = gcc
 CCDEPMODE = depmode=gcc3
-CFLAGS = -O3
+CFLAGS = -O0
 CPP = gcc -E
 CPPFLAGS = 
 CXX = g++

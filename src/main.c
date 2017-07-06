@@ -134,7 +134,7 @@ cpu-mapping.txt
 8 0 1 2 3 8 9 10 11
 @endverbatim
  * 
- * This file is must be created in the executable directory and used by default 
+ * This file is must be created in num_tuplesthe executable directory and used by default
  * if exists in the directory. It basically says that we will use 8 CPUs listed 
  * and threads spawned 1 to 8 will map to the given list in order. For instance 
  * thread 5 will run CPU 8. This file must be changed according to the system at
@@ -189,7 +189,7 @@ cpu-mapping.txt
  * @verbatim
       $ ./mchashjoins [other options] --r-size=128000000 --s-size=128000000 
 @endverbatim 
- *
+ *num_tuples
  * \note Configure must have run without --enable-key8B.
  * 
  * @subsection workloadA Workload A
@@ -280,7 +280,7 @@ int num_lineorder = 600000000;
 
 static struct vector_para VecParas [] = 
   {
-      {1.0, num_part,num_part,1},
+      {1.0, num_part,num_part},
       {1.0, num_supplier,num_supplier,1},   //--0 represents bitmap filtering, non-0 represents vector filter by zys
       {1.0, num_date,num_date,1},
       {1.0,num_customer,num_customer,1},
@@ -321,9 +321,9 @@ extern int    optind, opterr, optopt;
 extern int numalocalize;  /* defined in generator.c */
 extern int nthreads;      /* defined in generator.c */
 
-void init_ss_nsm(void *param, void **fact, void **dims);
-void init_ss_dsm(void *param, void **fact, void **dims);
-void init_prhj_sj(void *param, void **fact, void **dims);
+void init_npo_dsm(void *param, void **fact, void **dims);
+void init_npo_nsm(void *param, void **fact, void **dims);
+void init_prho_dsm(void *param, void **fact, void **dims);
 
 /** all available algorithms */
 static struct algo_t algos [] = 
@@ -337,10 +337,11 @@ static struct algo_t algos [] =
       {"AIR", AIR, NULL}, /* AIR algorithm by ZYS. in no_partitioning_join.c*/
       {"AIRU", AIRU, NULL}, /* FK update for AIR algorithm by ZYS. in no_partitioning_join.c*/
       {"STARJOIN", STARJOIN, NULL}, /* FK update for AIR algorithm by ZYS. in no_partitioning_join.c*/
-	  {"NPO_SN", NPO_SJ_NSM, init_ss_nsm},
-	  {"NPO_SD", NPO_SJ_DSM, init_ss_dsm},
+	  {"NPO_DSM", NPO_DSM, init_npo_dsm},
+	  {"NPO_NSM", NPO_NSM, init_npo_nsm},
 	  {"NPO_st", NPO_st, NULL}, /* NPO single threaded */
-	  {"PRHO_SJ", PRHO_SJ, init_prhj_sj},
+	  {"PRHO_DSM", PRHO_DSM, init_prho_dsm},
+	  {"PRO_DSM", PRO_DSM, init_prho_dsm},
 	  {{0}, 0, NULL}
   };
 
@@ -418,7 +419,7 @@ main(int argc, char ** argv)
 	num_lineorder = cmd_params.percent * num_lineorder;
     for (int i= 0; i < DIM_NUM + 1; i++) {
     	VecParas[i].num_tuples = cmd_params.percent * VecParas[i].num_tuples;
-    	VecParas[i].num_groups = VecParas[i].num_tuples;
+    	VecParas[i].num_groups = cmd_params.percent * VecParas[i].num_groups;
     }
     if(cmd_params.fullrange_keys) {
         create_relation_nonunique(&relR, cmd_params.r_size, INT_MAX);
@@ -749,7 +750,7 @@ parse_args(int argc, char ** argv, param_t * cmd_params)
 }
 
 
-void init_ss_nsm(void *param, void **fact, void **dims){
+void init_npo_dsm(void *param, void **fact, void **dims){
 	relation_nsm_t *rel_nsm_fact = malloc(sizeof(relation_nsm_t));
 	relation_nsm_t *rel_nsm_dims = malloc(sizeof(relation_nsm_t));
 	create_rel_nsm_fact_fk(rel_nsm_fact, num_lineorder, VecParas,DIM_NUM);
@@ -758,7 +759,7 @@ void init_ss_nsm(void *param, void **fact, void **dims){
 	*dims = rel_nsm_dims;
 }
 
-void init_ss_dsm(void *param, void **fact, void **dims){
+void init_npo_nsm(void *param, void **fact, void **dims){
 	relation_dsm_t *rel_nsm_fact = malloc(sizeof(relation_dsm_t));
 	relation_dsm_t *rel_nsm_dims = malloc(sizeof(relation_dsm_t));
 	create_rel_dsm_fact_fk(rel_nsm_fact, num_lineorder, VecParas,DIM_NUM);
@@ -767,7 +768,7 @@ void init_ss_dsm(void *param, void **fact, void **dims){
 	*dims = rel_nsm_dims;
 }
 
-void init_prhj_sj(void *param, void **fact, void **dims)
+void init_prho_dsm(void *param, void **fact, void **dims)
 {
 	relation_t *rel_fact = malloc(sizeof(relation_t) * DIM_NUM);
 	relation_t *rel_dim = malloc(sizeof(relation_t) * DIM_NUM);

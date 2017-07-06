@@ -124,9 +124,7 @@ extern int numalocalize;  /* defined in generator.c */
 typedef struct arg_t  arg_t;
 typedef struct part_t part_t;
 typedef struct synctimer_t synctimer_t;
-typedef int64_t (*JoinFunction)(const relation_t * const, 
-                                const relation_t * const,
-                                relation_t * const);
+
 
 #ifdef SYNCSTATS
 /** holds syncronization timing stats if configured with --enable-syncstats */
@@ -1318,16 +1316,8 @@ print_timing(uint64_t total, uint64_t build, uint64_t part,
     double cyclestuple = total;
     cyclestuple /= numtuples;
     fprintf(stdout, "TOTAL-TUPLES, RUNTIME TOTAL,PART,  BUILD, PROBE, TOTAL-TIME-USECS,  CYCLES-PER-TUPLE: \n");
-    fprintf(stderr, "%llu \t %llu \t %llu \t %llu \t %llu \t %.4lf \t %.4lf", 
+    fprintf(stdout, "%llu	%llu	 %llu	%llu	%llu	%.4lf	%.4lf	__END__\n",
             result, total, part, (build-part), (total-build), diff_usec, cyclestuple);
-    fprintf(stdout, "\n");
-    //fprintf(stdout, "TOTAL-TIME-USECS, TOTAL-TUPLES, CYCLES-PER-TUPLE: \n");
-    //fprintf(stdout, "%.4lf \t %llu \t ", diff_usec, result);
-    fflush(stdout);
-    //fprintf(stderr, "%.4lf ", cyclestuple);
-    fflush(stderr);
-    fprintf(stdout, "\n");
-
 }
 
 
@@ -1502,6 +1492,38 @@ join_init_run(relation_t * relR, relation_t * relS, JoinFunction jf, int nthread
     return result;
 }
 
+void * thd_func(void * param) {
+	struct thd_param *p = (struct thd_param *)(param);
+	p->result = join_init_run(p->relR, p->relS, p->jf, p->nthreads);
+	return p;
+}
+
+
+
+int64_t join_init_run_star_join(relation_t * relR, relation_t * relS, JoinFunction jf, int nthreads) {
+	struct thd_param param[DIM_NUM];
+    pthread_t tid[DIM_NUM];
+    int64_t rv;
+
+	int x = nthreads / DIM_NUM;
+	int y = nthreads % DIM_NUM;
+	for (int i = 0; i < DIM_NUM; i++) {
+
+		param[i].relR = relR + i;
+		param[i].relS = relS + i;
+		param[i].jf = jf;
+		param[i].nthreads = (i != DIM_NUM - 1 && y != 0) ? y : x;
+		param[i].result = 0;
+	}
+	for (int i = 0; i < DIM_NUM; i++) {
+    	pthread_create(&tid[i], NULL, thd_func, (void *) &param[i]);
+	}
+	for (int i = 0; i < DIM_NUM; i++) {
+		pthread_join(tid[i], NULL);
+		rv = param[i].result;
+	}
+	return rv;
+}
 /** \copydoc PRO */
 int64_t 
 PRO(relation_t * relR, relation_t * relS, int nthreads)
@@ -1524,13 +1546,15 @@ PRHO(relation_t * relR, relation_t * relS, int nthreads)
 }
 
 int64_t
-PRHO_SJ(relation_t * relR, relation_t * relS, int nthreads)
+PRHO_DSM(relation_t * relR, relation_t * relS, int nthreads)
 {
-	int ret;
-	for (int i = 0; i < DIM_NUM; i++) {
-		ret = join_init_run(relR+i, relS+i, histogram_optimized_join, nthreads);
-	}
-	return ret;
+    return join_init_run_star_join(relR, relS, histogram_optimized_join, nthreads);
+}
+
+int64_t
+PRO_DSM(relation_t * relR, relation_t * relS, int nthreads)
+{
+    return join_init_run_star_join(relR, relS, bucket_chaining_join, nthreads);
 }
 
 /** \copydoc RJ */

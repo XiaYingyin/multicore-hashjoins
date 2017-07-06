@@ -81,6 +81,17 @@ typedef struct relation_nsm_t {
 	uint32_t num_columns;
 } relation_nsm_t;
 
+typedef int64_t (*JoinFunction)(const relation_t * const,
+                                const relation_t * const,
+                                relation_t * const);
+
+typedef struct thd_param {
+	relation_t * relR;
+	relation_t * relS;
+	JoinFunction jf;
+	int nthreads;
+	int result;
+} thd_param_t;
 /** @} */
 
 #endif /* TYPES_H */

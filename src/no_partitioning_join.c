@@ -702,12 +702,8 @@ print_timing(uint64_t total, uint64_t build, uint64_t part,
     double cyclestuple = total;
     cyclestuple /= numtuples;
     fprintf(stdout, "TOTAL-TUPLES  ,RESULT-TUPLES ,RUNTIME TOTAL ,BUILD        ,PART            ,PROBE        ,TOTAL-TIME-USECS,  CYCLES-PER-TUPLE: \n");
-    fprintf(stderr, "%-15llu%-15llu%-15llu%-15llu%-15llu%-15llu%11.4lf    %11.4lf", 
+    fprintf(stdout, "%-15llu%-15llu%-15llu%-15llu%-15llu%-15llu%11.4lf    %11.4lf __END__\n",
             numtuples,result, total, build, part, (total-build-part), diff_usec, cyclestuple);
-    fflush(stdout);
-    fflush(stderr);
-    fprintf(stdout, "\n");
-
 }
 
 /** \copydoc NPO_st */
@@ -1879,7 +1875,7 @@ STARJOIN(column_t *factT, vector_t *DimVec, vector_t *MIndex,int nthreads, vecto
 }
 
 int64_t
-NPO_SJ_NSM(relation_t *relr, relation_t *rels, int nthreads) {
+NPO_DSM(relation_t *relr, relation_t *rels, int nthreads) {
 	hashtable_t **ht;
 	int64_t result = 0;
 	int32_t num_fact, num_dim, num_fact_per_thd; /* total and per thread num */
@@ -1966,7 +1962,7 @@ NPO_SJ_NSM(relation_t *relr, relation_t *rels, int nthreads) {
 
 
 int64_t
-NPO_SJ_DSM(relation_t *relr, relation_t *rels, int nthreads) {
+NPO_NSM(relation_t *relr, relation_t *rels, int nthreads) {
 	hashtable_t **ht;
 	int64_t result = 0;
 	int32_t num_fact, num_dim, num_fact_per_thd; /* total and per thread num */
