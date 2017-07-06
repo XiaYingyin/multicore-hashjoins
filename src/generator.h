@@ -108,15 +108,15 @@ int
 create_fact_fk(column_t * FactColumns,vector_para *VecParams,int factrows);
 
 
-int create_rel_nsm_fact_fk(relation_nsm_t * rel, int64_t rows, vector_para *param,
+int create_rel_fact_dsm(relation_dsm_t * rel, int64_t rows, vector_para *param,
 		int dims) ;
 
-int create_rel_nsm_dim_pk(relation_nsm_t * rel, vector_para *params, int dims);
+int create_rel_dim_dsm(relation_dsm_t * rel, vector_para *params, int dims);
 
-int create_rel_dsm_fact_fk(relation_dsm_t * rel, int64_t rows, vector_para *param,
+int create_rel_fact_nsm(relation_nsm_t * rel, int64_t rows, vector_para *param,
 		int dims);
 
-int create_rel_dsm_dim_pk(relation_dsm_t * rel, vector_para *param, int dims);
+int create_rel_dim_nsm(relation_nsm_t * rel, vector_para *param, int dims);
 
 int create_rel_sj_fact(relation_t * rel, int64_t rows,
 		vector_para *param, int dims);

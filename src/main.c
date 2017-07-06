@@ -751,19 +751,19 @@ parse_args(int argc, char ** argv, param_t * cmd_params)
 
 
 void init_npo_dsm(void *param, void **fact, void **dims){
-	relation_nsm_t *rel_nsm_fact = malloc(sizeof(relation_nsm_t));
-	relation_nsm_t *rel_nsm_dims = malloc(sizeof(relation_nsm_t));
-	create_rel_nsm_fact_fk(rel_nsm_fact, num_lineorder, VecParas,DIM_NUM);
-	create_rel_nsm_dim_pk(rel_nsm_dims, VecParas,DIM_NUM);
+	relation_dsm_t *rel_nsm_fact = malloc(sizeof(relation_dsm_t));
+	relation_dsm_t *rel_nsm_dims = malloc(sizeof(relation_dsm_t));
+	create_rel_fact_dsm(rel_nsm_fact, num_lineorder, VecParas,DIM_NUM);
+	create_rel_dim_dsm(rel_nsm_dims, VecParas,DIM_NUM);
 	*fact = rel_nsm_fact;
 	*dims = rel_nsm_dims;
 }
 
 void init_npo_nsm(void *param, void **fact, void **dims){
-	relation_dsm_t *rel_nsm_fact = malloc(sizeof(relation_dsm_t));
-	relation_dsm_t *rel_nsm_dims = malloc(sizeof(relation_dsm_t));
-	create_rel_dsm_fact_fk(rel_nsm_fact, num_lineorder, VecParas,DIM_NUM);
-	create_rel_dsm_dim_pk(rel_nsm_dims, VecParas,DIM_NUM);
+	relation_nsm_t *rel_nsm_fact = malloc(sizeof(relation_nsm_t));
+	relation_nsm_t *rel_nsm_dims = malloc(sizeof(relation_nsm_t));
+	create_rel_fact_nsm(rel_nsm_fact, num_lineorder, VecParas,DIM_NUM);
+	create_rel_dim_nsm(rel_nsm_dims, VecParas,DIM_NUM);
 	*fact = rel_nsm_fact;
 	*dims = rel_nsm_dims;
 }

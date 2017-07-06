@@ -148,27 +148,7 @@ struct arg_sj {
 } ;
 
 
-typedef struct arg_npo_sj_nsm {
-  int32_t tid;
-  hashtable_t ** ht;
-  relation_nsm_t *rel_fact;
-  relation_nsm_t *rel_dim;
-  int fact_begin;
-  int fact_end;
-  int dim_begin[DIM_NUM];
-  int dim_end[DIM_NUM];
-  int dims;
-  pthread_barrier_t * barrier;
-  int64_t num_results;
-#ifndef NO_TIMING
-  /* stats about the thread */
-  uint64_t timer1, timer2, timer3;
-  struct timeval start, end;
-#endif
-} arg_npo_sj_nsm_t;
-
-
-typedef struct arg_npo_sj_dsm {
+typedef struct arg_npo_dsm_t {
   int32_t tid;
   hashtable_t ** ht;
   relation_dsm_t *rel_fact;
@@ -185,7 +165,27 @@ typedef struct arg_npo_sj_dsm {
   uint64_t timer1, timer2, timer3;
   struct timeval start, end;
 #endif
-} arg_npo_sj_dsm_t;
+} arg_npo_dsm_t;
+
+
+typedef struct arg_npo_nsm_t {
+  int32_t tid;
+  hashtable_t ** ht;
+  relation_nsm_t *rel_fact;
+  relation_nsm_t *rel_dim;
+  int fact_begin;
+  int fact_end;
+  int dim_begin[DIM_NUM];
+  int dim_end[DIM_NUM];
+  int dims;
+  pthread_barrier_t * barrier;
+  int64_t num_results;
+#ifndef NO_TIMING
+  /* stats about the thread */
+  uint64_t timer1, timer2, timer3;
+  struct timeval start, end;
+#endif
+} arg_npo_nsm_t;
 /** 
  * @defgroup OverflowBuckets Buffer management for overflowing buckets.
  * Simple buffer management for overflow-buckets organized as a 
@@ -403,7 +403,7 @@ void build_hashtable_column(hashtable_t *ht, column_t *rel, int32_t start, int32
   }
 }
 
-void build_hashtable_dsm(hashtable_t *ht, relation_dsm_t *rel, int column, int32_t start, int32_t end,
+void build_hashtable_nsm(hashtable_t *ht, relation_nsm_t *rel, int column, int32_t start, int32_t end,
     bucket_buffer_t ** overflowbuf) {
   uint32_t row;
   const uint32_t hashmask = ht->hash_mask;
@@ -601,7 +601,7 @@ probe_uvector(intvector_t *vec, relation_t *rel,double uratio)
  *
  * @return number of matching tuples
  */
-int64_t probe_hashtable_column(hashtable_t *ht[], int num, relation_nsm_t *rel,
+int64_t probe_hashtable_column(hashtable_t *ht[], int num, relation_dsm_t *rel,
                               uint32_t begin, uint32_t end) {
   uint32_t i, j,k;
   int64_t matches;
@@ -646,7 +646,7 @@ int64_t probe_hashtable_column(hashtable_t *ht[], int num, relation_nsm_t *rel,
   return matches;
 }
 
-int64_t probe_hashtable_dsm(hashtable_t *ht[], int num_columns, relation_dsm_t *rel,
+int64_t probe_hashtable_nsm(hashtable_t *ht[], int num_columns, relation_nsm_t *rel,
                               uint32_t begin, uint32_t end) {
   uint32_t row, j,column;
   int64_t matches;
@@ -1301,9 +1301,9 @@ AIRU_thread(void * param)
  * @return
  */
 void *
-npo_sj_column_thread(void * param) {
+npo_dsm_thread(void * param) {
   int i, rv;
-  arg_npo_sj_nsm_t * args = (arg_npo_sj_nsm_t*) param;
+  arg_npo_dsm_t * args = (arg_npo_dsm_t*) param;
   bucket_buffer_t **overflowbuf;
   overflowbuf = malloc(args->dims * sizeof(bucket_buffer_t *));
   for (i = 0; i < args->dims; i++) {
@@ -1391,9 +1391,9 @@ npo_sj_column_thread(void * param) {
 }
 
 void *
-npo_sj_dsm_thread(void * param) {
+npo_nsm_thread(void * param) {
   int i, rv;
-  arg_npo_sj_dsm_t * args = (arg_npo_sj_dsm_t*) param;
+  arg_npo_nsm_t * args = (arg_npo_nsm_t*) param;
   bucket_buffer_t **overflowbuf;
   overflowbuf = malloc(args->dims * sizeof(bucket_buffer_t *));
   for (i = 0; i < args->dims; i++) {
@@ -1421,7 +1421,7 @@ npo_sj_dsm_thread(void * param) {
 
   /* insert tuples from the assigned part of relR to the ht */
   for (i = 0; i < args->dims; i++) {
-    build_hashtable_dsm(args->ht[i],
+    build_hashtable_nsm(args->ht[i],
           args->rel_dim, i, args->dim_begin[i],
            args->dim_end[i], &(overflowbuf[i]));
   }/* wait at a barrier until each thread completes build phase */
@@ -1446,7 +1446,7 @@ npo_sj_dsm_thread(void * param) {
 #endif
 
   /* probe for matching tuples from the assigned part of relS */
-  args->num_results = probe_hashtable_dsm(args->ht, args->dims,
+  args->num_results = probe_hashtable_nsm(args->ht, args->dims,
               args->rel_fact, args->fact_begin, args->fact_end);
 
 #ifndef NO_TIMING
@@ -1881,12 +1881,12 @@ NPO_DSM(relation_t *relr, relation_t *rels, int nthreads) {
 	int32_t num_fact, num_dim, num_fact_per_thd; /* total and per thread num */
 	int i, j, rv;
 	cpu_set_t set;
-	arg_npo_sj_nsm_t args[nthreads];
+	arg_npo_dsm_t args[nthreads];
 	pthread_t tid[nthreads];
 	pthread_attr_t attr;
 	pthread_barrier_t barrier;
-	relation_nsm_t *fact = (relation_nsm_t*)relr;
-	relation_nsm_t *dim = (relation_nsm_t*)rels;
+	relation_dsm_t *fact = (relation_dsm_t*)relr;
+	relation_dsm_t *dim = (relation_dsm_t*)rels;
 
 	int dims = dim->num_columns;
 	num_fact = fact->columns->num_tuples;
@@ -1934,7 +1934,7 @@ NPO_DSM(relation_t *relr, relation_t *rels, int nthreads) {
 					(i == (nthreads - 1)) ? num_dim : num_dim_per_thd * (i + 1);
 		}
 
-		rv = pthread_create(&tid[i], &attr, npo_sj_column_thread, (void*) &args[i]);
+		rv = pthread_create(&tid[i], &attr, npo_dsm_thread, (void*) &args[i]);
 		if (rv) {
 			printf("ERROR; return code from pthread_create() is %d\n", rv);
 			exit(-1);
@@ -1968,12 +1968,12 @@ NPO_NSM(relation_t *relr, relation_t *rels, int nthreads) {
 	int32_t num_fact, num_dim, num_fact_per_thd; /* total and per thread num */
 	int i, j, rv;
 	cpu_set_t set;
-	arg_npo_sj_dsm_t args[nthreads];
+	arg_npo_nsm_t args[nthreads];
 	pthread_t tid[nthreads];
 	pthread_attr_t attr;
 	pthread_barrier_t barrier;
-	relation_dsm_t *fact = (relation_dsm_t*)relr;
-	relation_dsm_t *dim = (relation_dsm_t*)rels;
+	relation_nsm_t *fact = (relation_nsm_t*)relr;
+	relation_nsm_t *dim = (relation_nsm_t*)rels;
 
 	int dims = dim->num_columns;
 	num_fact = fact->num_tuples[0];
@@ -2021,7 +2021,7 @@ NPO_NSM(relation_t *relr, relation_t *rels, int nthreads) {
 					(i == (nthreads - 1)) ? num_dim : num_dim_per_thd * (i + 1);
 		}
 
-		rv = pthread_create(&tid[i], &attr, npo_sj_dsm_thread, (void*) &args[i]);
+		rv = pthread_create(&tid[i], &attr, npo_nsm_thread, (void*) &args[i]);
 		if (rv) {
 			printf("ERROR; return code from pthread_create() is %d\n", rv);
 			exit(-1);

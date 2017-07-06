@@ -69,17 +69,18 @@ struct relation_t {
   uint32_t  num_tuples;
 };
 
-typedef struct relation_dsm_t {
+typedef struct relation_nsm_t {
 	tuple_t **tuples;
 	uint32_t num_columns;
 	uint32_t *num_tuples;
 	uint8_t **bitmaps;
-} relation_dsm_t;
+	tuple_t *mem;
+} relation_nsm_t;
 
-typedef struct relation_nsm_t {
+typedef struct relation_dsm_t {
 	column_t *columns;
 	uint32_t num_columns;
-} relation_nsm_t;
+} relation_dsm_t;
 
 typedef int64_t (*JoinFunction)(const relation_t * const,
                                 const relation_t * const,

@@ -391,7 +391,7 @@ int create_fact_fk(column_t * FactColumns, vector_para *VecParams, int factrows)
 	return 0;
 }
 
-int create_rel_nsm_fact_fk(relation_nsm_t * rel, int64_t rows, vector_para *param,
+int create_rel_fact_dsm(relation_dsm_t * rel, int64_t rows, vector_para *param,
 		int dims) {
 
 	int i = 0, j;
@@ -429,7 +429,7 @@ int create_rel_nsm_fact_fk(relation_nsm_t * rel, int64_t rows, vector_para *para
 	return 0;
 }
 
-int create_rel_dsm_fact_fk(relation_dsm_t * rel, int64_t rows,
+int create_rel_fact_nsm(relation_nsm_t * rel, int64_t rows,
 		vector_para *param, int dims) {
 
 	int column, row;
@@ -438,12 +438,12 @@ int create_rel_dsm_fact_fk(relation_dsm_t * rel, int64_t rows,
 	rel->num_columns = dims;
 	rel->tuples = (tuple_t**) malloc(rows * sizeof(tuple_t*));
 	rel->num_tuples = malloc(dims * sizeof(uint32_t));
-
+	rel->mem = (tuple_t *)malloc(dims * rows * sizeof(tuple_t));
 	for (column = 0; column < dims; column++) {
 		rel->num_tuples[column] = rows;
 	}
 	for (row = 0; row < rows; row++) {
-		rel->tuples[row] = malloc(dims * sizeof(tuple_t));
+		rel->tuples[row] = rel->mem + dims * row;
 		for (column = 0; column < dims; column++) {
 			int32_t groups = param[column].num_tuples;
 			rel->tuples[row][column].key = row % groups;
@@ -459,7 +459,7 @@ int create_rel_dsm_fact_fk(relation_dsm_t * rel, int64_t rows,
 	return 0;
 }
 
-int create_rel_nsm_dim_pk(relation_nsm_t * rel, vector_para *params, int dims) {
+int create_rel_dim_dsm(relation_dsm_t * rel, vector_para *params, int dims) {
 	int i, j, counter = 0, veccounter = 0;
 	check_seed();
 	rel->num_columns = dims;
@@ -502,7 +502,7 @@ int create_rel_nsm_dim_pk(relation_nsm_t * rel, vector_para *params, int dims) {
 	return 0;
 }
 
-int create_rel_dsm_dim_pk(relation_dsm_t * rel, vector_para *param, int dims) {
+int create_rel_dim_nsm(relation_nsm_t * rel, vector_para *param, int dims) {
 	int column, row;
 	check_seed();
 	rel->num_columns = dims;
@@ -512,12 +512,12 @@ int create_rel_dsm_dim_pk(relation_dsm_t * rel, vector_para *param, int dims) {
 
 	for (column = 0; column < dims; column++) {
 		uint32_t rows = param[column].num_tuples;
-		int32_t groups = param[column].num_tuples;
 		rel->num_tuples[column] = rows;
 		rel->bitmaps[column] = malloc(rows * sizeof(uint8_t *));
 		rel->tuples[column] = (tuple_t*)malloc(rows * sizeof(tuple_t));
 		for (row = 0; row < rows; row++) {
-			rel->tuples[column][row].key = row% groups;
+			rel->tuples[column][row].key = row % rows;
+
 			if ((double) rand() < param[column].selectivity * (double) RAND_MAX) {
 				rel->bitmaps[column][row] = 1;
 			} else {
