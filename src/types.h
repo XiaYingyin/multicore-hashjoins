@@ -46,6 +46,7 @@ struct tuple_t {
 /** Type definition for a column store tuple, value represents the key inside the column by zys */
 struct column_t {
     intkey_t * column;
+    value_t *payload;
     int8_t *bitmap;
     uint32_t  num_tuples;
 };
