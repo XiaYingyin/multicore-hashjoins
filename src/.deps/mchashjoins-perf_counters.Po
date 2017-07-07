@@ -1,6 +1,0 @@
-mchashjoins-perf_counters.o: perf_counters.c /usr/include/stdc-predef.h \
- perf_counters.h
-
-/usr/include/stdc-predef.h:
-
-perf_counters.h:
