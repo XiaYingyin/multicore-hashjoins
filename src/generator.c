@@ -439,12 +439,12 @@ int create_rel_fact_nsm(relation_nsm_t * rel, int64_t rows,
 	rel->num_columns = dims;
 	rel->tuples = (tuple_t**) malloc(rows * sizeof(tuple_t*));
 	rel->num_tuples = malloc(dims * sizeof(uint32_t));
-	rel->mem = (tuple_t *)malloc(dims * rows * sizeof(tuple_t));
+	rel->mem = (tuple_t *)malloc((int64_t)dims * rows * sizeof(tuple_t));
 	for (column = 0; column < dims; column++) {
 		rel->num_tuples[column] = rows;
 	}
 	for (row = 0; row < rows; row++) {
-		rel->tuples[row] = rel->mem + dims * row;
+		rel->tuples[row] = rel->mem + (int64_t)dims * row;
 		for (column = 0; column < dims; column++) {
 			int32_t groups = param[column].num_tuples;
 			rel->tuples[row][column].key = row % groups;
